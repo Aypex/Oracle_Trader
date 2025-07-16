@@ -36,12 +36,7 @@ def log_trade(asset_bought, asset_sold, profit_pct, rules):
     conn.close()
 
 def main():
-    # --- THIS IS THE FIX ---
-    # The first time this runs, it will delete the old, bad database.
-    if os.path.exists(DB_FILE):
-        os.remove(DB_FILE)
-        print("Old database file found and removed. Starting fresh.")
-    # ----------------------
+
     
     print("Oracle Trader is initializing...")
     initialize_database()
