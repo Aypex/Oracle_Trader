@@ -1,6 +1,7 @@
 import time
 import os
 import ccxt
+import pandas as pd
 from strategy import ranked_momentum_rotation_strategy # We import our function
 
 def main():
