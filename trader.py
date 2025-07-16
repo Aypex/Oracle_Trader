@@ -1,38 +1,38 @@
-# trader.py (With a guaranteed database reset)
+# trader.py - STEP 2: THE FINAL SAFE SCRIPT
 
 import time
 import os
 import ccxt
 import sqlite3
 import random
-# from strategy import ranked_momentum_rotation_strategy # Assumes strategy.py exists
+# This assumes you have a strategy.py file in your repository
+# from strategy import ranked_momentum_rotation_strategy
 
 DB_FILE = "trader_performance.db"
 
 def initialize_database():
-    """Connects to the DB and ensures the table structure is correct."""
+    """Connects to the DB and creates the table only if it doesn't already exist."""
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     
-    # --- THIS IS THE GUARANTEED FIX ---
-    # This command will DELETE the old, bad table every time the bot starts.
-    cursor.execute("DROP TABLE IF EXISTS trades")
-    # ---------------------------------
-    
-    # The bot will then immediately create the new, correct table.
+    # This is the safe, long-term version that will not delete your data.
     cursor.execute('''
-        CREATE TABLE trades (
-            id INTEGER PRIMARY KEY, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            asset_bought TEXT, asset_sold TEXT, profit_loss_pct REAL,
-            trend_window_used INTEGER, momentum_window_used INTEGER
+        CREATE TABLE IF NOT EXISTS trades (
+            id INTEGER PRIMARY KEY,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            asset_bought TEXT,
+            asset_sold TEXT,
+            profit_loss_pct REAL,
+            trend_window_used INTEGER,
+            momentum_window_used INTEGER
         )
     ''')
     conn.commit()
     conn.close()
-    print("Database has been reset and initialized correctly.")
+    print("Database initialized successfully.")
 
-# The rest of the file is the same...
 def log_trade(asset_bought, asset_sold, profit_pct, rules):
+    """Logs a simulated or real trade to the database."""
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     cursor.execute(
@@ -51,8 +51,10 @@ def main():
 
     if not api_key or not secret_key:
         print("!!! WARNING: Running in PAPER TRADING MODE. !!!")
+        LIVE_MODE = False
     else:
         print("API keys found. Running in LIVE TRADING MODE.")
+        LIVE_MODE = True
     
     current_rules = {'trend_window': 50, 'momentum_window': 20}
     asset_held = 'USDT'
