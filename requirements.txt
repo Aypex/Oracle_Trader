@@ -1,2 +1,9 @@
+# For the trading bot
 pandas
 psycopg2-binary
+
+# For the new web dashboard
+Flask
+Flask-Login
+Flask-WTF
+Werkzeug
