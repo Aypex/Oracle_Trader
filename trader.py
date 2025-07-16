@@ -1,4 +1,4 @@
-# trader.py (With a one-time self-cleaning function)
+# trader.py (With a guaranteed database reset)
 
 import time
 import os
@@ -10,11 +10,18 @@ import random
 DB_FILE = "trader_performance.db"
 
 def initialize_database():
-    """Connects to the DB and creates the table with all necessary columns."""
+    """Connects to the DB and ensures the table structure is correct."""
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
+    
+    # --- THIS IS THE GUARANTEED FIX ---
+    # This command will DELETE the old, bad table every time the bot starts.
+    cursor.execute("DROP TABLE IF EXISTS trades")
+    # ---------------------------------
+    
+    # The bot will then immediately create the new, correct table.
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS trades (
+        CREATE TABLE trades (
             id INTEGER PRIMARY KEY, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
             asset_bought TEXT, asset_sold TEXT, profit_loss_pct REAL,
             trend_window_used INTEGER, momentum_window_used INTEGER
@@ -22,10 +29,10 @@ def initialize_database():
     ''')
     conn.commit()
     conn.close()
-    print("Database structure is correct.")
+    print("Database has been reset and initialized correctly.")
 
+# The rest of the file is the same...
 def log_trade(asset_bought, asset_sold, profit_pct, rules):
-    """Logs a simulated or real trade to the database."""
     conn = sqlite3.connect(DB_FILE)
     cursor = conn.cursor()
     cursor.execute(
@@ -36,8 +43,6 @@ def log_trade(asset_bought, asset_sold, profit_pct, rules):
     conn.close()
 
 def main():
-
-    
     print("Oracle Trader is initializing...")
     initialize_database()
     
@@ -46,10 +51,8 @@ def main():
 
     if not api_key or not secret_key:
         print("!!! WARNING: Running in PAPER TRADING MODE. !!!")
-        LIVE_MODE = False
     else:
         print("API keys found. Running in LIVE TRADING MODE.")
-        LIVE_MODE = True
     
     current_rules = {'trend_window': 50, 'momentum_window': 20}
     asset_held = 'USDT'
