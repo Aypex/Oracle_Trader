@@ -1,8 +1,8 @@
-# dashboard.py - The Secure Flask Web Dashboard
+# dashboard.py - The Secure Flask Web Dashboard with Live Data API
 
 import os
 import json
-from flask import Flask, render_template, redirect, url_for, request, flash
+from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 import psycopg2
@@ -29,7 +29,6 @@ def _get_db_connection():
     return psycopg2.connect(DATABASE_URL)
 
 def _set_db_value(key, value):
-    """Helper function to set a key in the key_value_store table."""
     conn = _get_db_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -42,6 +41,7 @@ def _set_db_value(key, value):
 
 @login_manager.user_loader
 def load_user(user_id):
+    # ... (This function remains the same)
     conn = _get_db_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT id, username, password_hash FROM users WHERE id = %s", (int(user_id),))
@@ -55,10 +55,10 @@ def load_user(user_id):
 # --- Web Page Routes ---
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # ... (This function remains the same)
     if current_user.is_authenticated:
         return redirect(url_for('protected_dashboard'))
     if request.method == 'POST':
-        # ... (Login logic remains the same)
         username, password = request.form['username'], request.form['password']
         conn = _get_db_connection()
         cursor = conn.cursor()
@@ -77,31 +77,51 @@ def login():
 @app.route('/dashboard')
 @login_required
 def protected_dashboard():
+    """Renders the main dashboard page. The data will be loaded by JavaScript."""
+    # We no longer need to fetch data here, as the frontend will do it.
+    # We just need to render the main page structure.
+    return render_template('protected_dashboard.html', username=current_user.username)
+
+# --- NEW DATA API ROUTE ---
+@app.route('/api/data')
+@login_required
+def api_data():
+    """This endpoint provides live data to the frontend as JSON."""
     bot_status = "Waiting for status..."
     live_rules = {"trend_window": "N/A", "momentum_window": "N/A"}
+    
     try:
         conn = _get_db_connection()
         cursor = conn.cursor()
+
+        # Get the latest status event
         cursor.execute("SELECT content FROM events WHERE type = 'STATUS' ORDER BY timestamp DESC LIMIT 1")
         latest_status_event = cursor.fetchone()
         if latest_status_event:
             bot_status = latest_status_event[0].get('message', 'Could not parse status.')
+
+        # Get the latest insight to find the current rules
         cursor.execute("SELECT content FROM events WHERE type = 'INSIGHT' ORDER BY timestamp DESC LIMIT 1")
         latest_insight_event = cursor.fetchone()
         if latest_insight_event:
             live_rules = latest_insight_event[0].get('promoted_rules', live_rules)
+
         cursor.close()
         conn.close()
     except Exception as e:
         print(f"Error fetching data from database: {e}")
         bot_status = "Error connecting to database."
-    return render_template('protected_dashboard.html', username=current_user.username, bot_status=bot_status, live_rules=live_rules)
 
-# --- NEW ACTION ROUTE FOR THE BUTTON ---
+    # Return the data in JSON format
+    return jsonify({
+        'bot_status': bot_status,
+        'live_rules': live_rules
+    })
+
 @app.route('/force-refinement', methods=['POST'])
 @login_required
 def force_refinement():
-    """Sets a flag in the database to tell the bot to run refinement on its next cycle."""
+    # ... (This function remains the same)
     try:
         _set_db_value('force_refinement', 'true')
         flash('Refinement signal sent! The bot will refine on its next cycle.', 'success')
@@ -113,11 +133,13 @@ def force_refinement():
 @app.route('/logout')
 @login_required
 def logout():
+    # ... (This function remains the same)
     logout_user()
     return redirect(url_for('login'))
 
 @app.route('/')
 def index():
+    # ... (This function remains the same)
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
