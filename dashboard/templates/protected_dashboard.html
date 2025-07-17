@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-g">
     <title>Dashboard</title>
      <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: #1e2025; color: #dce0e8; margin: 0; padding: 20px; }
@@ -12,7 +12,7 @@
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
         .card { background: #2e3440; padding: 25px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
         .card h2 { margin-top: 0; color: #81a1c1; border-bottom: 1px solid #4c566a; padding-bottom: 10px; }
-        .card p { font-size: 1.1em; margin: 10px 0 0 0; }
+        .card p { font-size: 1.1em; margin: 10px 0 0 0; min-height: 1.2em; /* Prevents layout jump */}
         .card .value { font-size: 1.8em; color: #a3be8c; font-weight: bold; }
         .status-text { color: #ebcb8b; font-style: italic; }
         .section { margin-top: 40px; }
@@ -29,7 +29,6 @@
             <a href="/logout" class="logout">Logout</a>
         </header>
 
-        <!-- Flash messages for notifications -->
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
@@ -42,15 +41,18 @@
         <div class="grid">
             <div class="card">
                 <h2>Bot Status</h2>
-                <p class="status-text">{{ bot_status }}</p>
+                <!-- We give this an ID so JavaScript can find it -->
+                <p class="status-text" id="bot-status-text">Loading...</p>
             </div>
             <div class="card">
                 <h2>Live Trend Window</h2>
-                <p class="value">{{ live_rules.trend_window }}</p>
+                <!-- We give this an ID so JavaScript can find it -->
+                <p class="value" id="trend-window-value">...</p>
             </div>
             <div class="card">
                 <h2>Live Momentum Window</h2>
-                <p class="value">{{ live_rules.momentum_window }}</p>
+                <!-- We give this an ID so JavaScript can find it -->
+                <p class="value" id="momentum-window-value">...</p>
             </div>
         </div>
 
@@ -58,14 +60,41 @@
             <h2>System Controls</h2>
             <div class="card">
                 <h2>Force Strategy Refinement</h2>
-                <p>Click this button to signal the bot to run its learning and refinement process on the next cycle, regardless of the schedule.</p>
+                <p>Click this button to signal the bot to run its learning process on the next cycle.</p>
                 <br>
                 <form action="/force-refinement" method="POST">
                     <button type="submit">Refine Strategy Now</button>
                 </form>
             </div>
         </div>
-
     </div>
+
+    <!-- NEW JAVASCRIPT BLOCK FOR AUTO-REFRESHING -->
+    <script>
+        // This function will run when the entire page has loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            // This is the main function that fetches and updates the data
+            function updateDashboardData() {
+                // Use the modern 'fetch' API to get data from our new endpoint
+                fetch('/api/data')
+                    .then(response => response.json()) // Convert the response to JSON
+                    .then(data => {
+                        // Update the HTML elements with the new data
+                        document.getElementById('bot-status-text').textContent = data.bot_status;
+                        document.getElementById('trend-window-value').textContent = data.live_rules.trend_window;
+                        document.getElementById('momentum-window-value').textContent = data.live_rules.momentum_window;
+                    })
+                    .catch(error => console.error('Error fetching dashboard data:', error)); // Log errors to the browser console
+            }
+
+            // Call the function once immediately when the page loads
+            updateDashboardData();
+
+            // Then, set it to run automatically every 5 seconds (5000 milliseconds)
+            setInterval(updateDashboardData, 5000);
+        });
+    </script>
+
 </body>
 </html>
